@@ -1,0 +1,77 @@
+import os
+import requests
+import datetime
+
+# আপনার GitHub Raw লিঙ্কগুলো (সঠিকভাবে বসাবেন)
+EXPIRY_URL = "https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/main/expiry.txt"
+COMMAND_URL = "https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/main/cmd.txt"
+
+# আপনার টেলিগ্রাম কন্টাক্ট লিঙ্ক বা ইউজারনেম
+TELEGRAM_ADMIN = "@your_username" # এখানে আপনার টেলিগ্রাম ইউজারনেম দিন
+
+def get_data(url):
+    try:
+        r = requests.get(url, timeout=10)
+        return r.text.strip() if r.status_code == 200 else None
+    except:
+        return None
+
+def start():
+    print("⏳ চেকিং এক্সেস...")
+    
+    # ১. মেয়াদ চেক করা
+    expiry_date_str = get_data(EXPIRY_URL)
+    if not expiry_date_str:
+        print("❌ ইন্টারনেট নেই বা সার্ভার সমস্যা! আবার চেষ্টা করুন।")
+        return
+
+    try:
+        expiry_date = datetime.datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
+    except:
+        print("❌ তারিখের ফরম্যাট ভুল! অ্যাডমিনের সাহায্য নিন।")
+        return
+
+    if datetime.date.today() > expiry_date:
+        print("\n" + "="*40)
+        print("🚫 TIME EXPIRED!")
+        print(f"আপনার টুলের মেয়াদ শেষ হয়ে গেছে।")
+        print(f"যোগাযোগ করুন: {@rifat_developer}")
+        print("="*40 + "\n")
+        return
+
+    # ২. কমান্ড লোড করা
+    print("✅ Access Granted! কমান্ড লোড হচ্ছে...")
+    raw_command = get_data(COMMAND_URL)
+    
+    if not raw_command:
+        print("❌ কমান্ড লোড করা সম্ভব হয়নি!")
+        return
+
+    # ৩. ভিডিও প্রসেসিং শুরু
+    if not os.path.exists('_output'): 
+        os.makedirs('_output')
+    
+    # ইনপুট ফোল্ডার চেক
+    if not os.path.exists('_input'):
+        os.makedirs('_input')
+        print("ℹ️ '_input' ফোল্ডার তৈরি করা হয়েছে। এতে ভিডিও রাখুন।")
+        return
+
+    input_files = [f for f in os.listdir('_input') if f.endswith(('.mp4', '.mkv', '.mov', '.ts'))]
+    
+    if not input_files:
+        print("❗ '_input' ফোল্ডারে কোনো ভিডিও পাওয়া যায়নি!")
+        return
+
+    for file in input_files:
+        print(f"\n🎬 Processing: {file}")
+        # GitHub থেকে আসা কমান্ডে ইনপুট ও আউটপুট পাথ বসানো
+        final_cmd = raw_command.replace("{input}", f"_input/{file}").replace("{output}", f"_output/{file}")
+        
+        # কমান্ড রান করা
+        os.system(final_cmd)
+
+    print("\n✅ সব ভিডিও প্রসেস করা হয়েছে!")
+
+if __name__ == "__main__":
+    start()
