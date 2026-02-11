@@ -1,77 +1,17 @@
-import os
-import requests
-import datetime
-
-# আপনার GitHub Raw লিঙ্কগুলো (সঠিকভাবে বসাবেন)
-EXPIRY_URL = "https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/main/expiry.txt"
-COMMAND_URL = "https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/main/cmd.txt"
-
-# আপনার টেলিগ্রাম কন্টাক্ট লিঙ্ক বা ইউজারনেম
-TELEGRAM_ADMIN = "@your_username" # এখানে আপনার টেলিগ্রাম ইউজারনেম দিন
-
-def get_data(url):
-    try:
-        r = requests.get(url, timeout=10)
-        return r.text.strip() if r.status_code == 200 else None
-    except:
-        return None
-
-def start():
-    print("⏳ চেকিং এক্সেস...")
-    
-    # ১. মেয়াদ চেক করা
-    expiry_date_str = get_data(EXPIRY_URL)
-    if not expiry_date_str:
-        print("❌ ইন্টারনেট নেই বা সার্ভার সমস্যা! আবার চেষ্টা করুন।")
-        return
-
-    try:
-        expiry_date = datetime.datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
-    except:
-        print("❌ তারিখের ফরম্যাট ভুল! অ্যাডমিনের সাহায্য নিন।")
-        return
-
-    if datetime.date.today() > expiry_date:
-        print("\n" + "="*40)
-        print("🚫 TIME EXPIRED!")
-        print(f"আপনার টুলের মেয়াদ শেষ হয়ে গেছে।")
-        print(f"যোগাযোগ করুন: {@rifat_developer}")
-        print("="*40 + "\n")
-        return
-
-    # ২. কমান্ড লোড করা
-    print("✅ Access Granted! কমান্ড লোড হচ্ছে...")
-    raw_command = get_data(COMMAND_URL)
-    
-    if not raw_command:
-        print("❌ কমান্ড লোড করা সম্ভব হয়নি!")
-        return
-
-    # ৩. ভিডিও প্রসেসিং শুরু
-    if not os.path.exists('_output'): 
-        os.makedirs('_output')
-    
-    # ইনপুট ফোল্ডার চেক
-    if not os.path.exists('_input'):
-        os.makedirs('_input')
-        print("ℹ️ '_input' ফোল্ডার তৈরি করা হয়েছে। এতে ভিডিও রাখুন।")
-        return
-
-    input_files = [f for f in os.listdir('_input') if f.endswith(('.mp4', '.mkv', '.mov', '.ts'))]
-    
-    if not input_files:
-        print("❗ '_input' ফোল্ডারে কোনো ভিডিও পাওয়া যায়নি!")
-        return
-
-    for file in input_files:
-        print(f"\n🎬 Processing: {file}")
-        # GitHub থেকে আসা কমান্ডে ইনপুট ও আউটপুট পাথ বসানো
-        final_cmd = raw_command.replace("{input}", f"_input/{file}").replace("{output}", f"_output/{file}")
-        
-        # কমান্ড রান করা
-        os.system(final_cmd)
-
-    print("\n✅ সব ভিডিও প্রসেস করা হয়েছে!")
-
-if __name__ == "__main__":
-    start()
+for t in _input/*; do
+    ffmpeg -y -i "$t" -i blocker.mp4 -i myvideo.mp4 \
+    -filter_complex \
+    "[0:v]crop=iw/1.2:ih/1.2, scale=392:315, setpts=PTS-STARTPTS[v]; \
+     movie=ibg.mp4:loop=999, scale=854:480, setpts=N/(FRAME_RATE*TB)[bg]; \
+     [bg][v]overlay=x=2:y=107:shortest=1, setsar=1[vmain]; \
+     [1:v]scale=854:480, setsar=1[vblock]; \
+     [2:v]scale=854:480, setsar=1[vgam]; \
+     [0:a]atempo=1,volume=20dB,aecho=1:0.6:2:0.4,firequalizer=gain_entry='entry(0,-23);entry(250,-11.5);entry(6000,0);entry(12000,8);entry(16000,16)',compand=attacks=7:decays=1:points=-90/-90-70/-60 -15/-15 0/-10:soft-knee=1:volume=-70:gain=3,highpass=f=300,lowpass=f=700,volume=6[a1]; \
+     amovie=bg2.mp4:loop=999, volume=1[a2]; \
+     [a1][a2]amix=duration=shortest[amain]; \
+     [vmain][amain][vblock][1:a][vgam][2:a]concat=n=3:v=1:a=1[v_out][a_out]" \
+    -map "[v_out]" -map "[a_out]" \
+    -vcodec libx264 -preset ultrafast -pix_fmt yuv420p -r 30 -g 60 -b:v 1000k \
+    -acodec aac -b:a 128k -ar 44100 -threads 0 \
+    "_output/${t##*/}";
+done
