@@ -1,67 +1,55 @@
-import os
-import requests
-import datetime
+import os, requests, datetime, time
 
-# আপনার GitHub-এর Raw লিঙ্কগুলো
+# আপনার ডাটা লিঙ্ক
 EXPIRY_URL = "https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/refs/heads/main/expiry.txt"
-COMMAND_URL = "https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/refs/heads/main/cmd2.txt"
-
-# আপনার টেলিগ্রাম লিঙ্ক
-TELEGRAM_LINK = "https://t.me/rifat_developer" 
+COMMAND_URL = "https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/refs/heads/main/cmd.txt"
+CHECK_FILE = ".last_check" # গোপন ফাইল যেখানে সময় সেভ থাকবে
 
 def get_data(url):
     try:
-        r = requests.get(url, timeout=15)
-        if r.status_code == 200:
-            return r.text.strip()
-        return None
+        return requests.get(url, timeout=10).text.strip()
     except:
         return None
 
 def start():
-    print("\n[+] চেকিং এক্সেস (Tool 2)...")
-    
-    # ১. একটাই expiry.txt থেকে মেয়াদ চেক করা
-    expiry_data = get_data(EXPIRY_URL)
-    if not expiry_data:
-        print("[-] সার্ভার কানেকশন এরর!")
-        return
+    now = time.time()
+    should_check_online = True
 
-    try:
-        expiry_date = datetime.datetime.strptime(expiry_data, '%Y-%m-%d').date()
-    except:
-        print("[-] তারিখের ফরম্যাটে ভুল!")
-        return
+    # ১. চেক করা যে আগে কোনোবার সফলভাবে চেক হয়েছে কি না
+    if os.path.exists(CHECK_FILE):
+        with open(CHECK_FILE, "r") as f:
+            last_time = float(f.read())
+        
+        # যদি শেষ চেকের পর ২৩ ঘণ্টা (৮২৮০০ সেকেন্ড) পার না হয়
+        if now - last_time < 82800:
+            should_check_online = False
 
-    if datetime.date.today() > expiry_date:
-        print("\n🚫 TIME EXPIRED! মেয়াদ শেষ। আপনাকে টেলিগ্রামে পাঠানো হচ্ছে...")
-        os.system(f"termux-open-url {TELEGRAM_LINK}")
-        return
+    if should_check_online:
+        print("[+] সার্ভার থেকে ডেট ভেরিফাই করা হচ্ছে...")
+        expiry_data = get_data(EXPIRY_URL)
+        
+        if expiry_data:
+            expiry_date = datetime.datetime.strptime(expiry_data, '%Y-%m-%d').date()
+            if datetime.date.today() > expiry_date:
+                print("\n🚫 মেয়াদ শেষ! যোগাযোগ করুন: @rifat_developer")
+                os.system("termux-open-url https://t.me/rifat_developer")
+                return
+            
+            # সফল চেকের পর বর্তমান সময় লিখে রাখা
+            with open(CHECK_FILE, "w") as f:
+                f.write(str(now))
+        else:
+            print("[-] ইন্টারনেট কানেকশন প্রয়োজন (দিনে অন্তত একবার)!")
+            return
+    else:
+        print("[✔] অফলাইন ভেরিফাইড (পরবর্তী চেক ২৩ ঘণ্টা পর)")
 
-    # ২. নতুন কমান্ড (cmd2.txt) লোড করা
-    print("[+] এক্সেস অনুমোদিত! Tool 2 এর কমান্ড লোড হচ্ছে...")
-    raw_command = get_data(COMMAND_URL)
-    
-    if not raw_command:
-        print("[-] cmd2.txt ফাইল পাওয়া যায়নি!")
-        return
-
-    # ৩. ভিডিও চেক করা
-    if not os.path.exists('_outputDone'): os.makedirs('_outputDone')
-    if not os.path.exists('_output'):
-        print("[-] '_output' ফোল্ডারটি পাওয়া যায়নি! আগে প্রথম টুলটি রান করুন।")
-        return
-
-    # আপনার লুপ কমান্ডটি সরাসরি রান করা
-    print("[🚀] মাল্টি-ভিডিও প্রসেসিং শুরু হচ্ছে...")
-    
-    # কমান্ডের ভেতর {input} এর জায়গায় '_output/*' বসিয়ে দেওয়া হচ্ছে
-    final_cmd = raw_command.replace("{input}", "_output/*").replace("{output}", "")
-    
-    os.system(final_cmd)
-
-    print("\n[✅] অভিনন্দন! Tool 2 এর সব কাজ শেষ।")
-    print("[💾] ভিডিওগুলো '_outputDone' ফোল্ডারে সেভ হয়েছে।")
+    # ২. কমান্ড রান করা
+    cmd = get_data(COMMAND_URL)
+    if cmd:
+        os.system(cmd)
+    else:
+        print("[-] কমান্ড লোড করা যাচ্ছে না!")
 
 if __name__ == "__main__":
     start()
