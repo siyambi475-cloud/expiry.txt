@@ -15,7 +15,7 @@ def start():
 
     if should_check:
         print("[+] ভেরিফাই করা হচ্ছে...")
-        r = requests.get(EXPIRY_URL)
+        r = requests.get(https://raw.githubusercontent.com/siyambi475-cloud/expiry.txt/refs/heads/main/expiry.txt)
         if r.status_code == 200:
             exp = datetime.datetime.strptime(r.text.strip(), '%Y-%m-%d').date()
             if datetime.date.today() > exp:
